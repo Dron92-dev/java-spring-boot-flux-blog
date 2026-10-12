@@ -2,6 +2,7 @@ package io.hexlet;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.hexlet.model.Article;
 import io.hexlet.model.User;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -138,5 +139,146 @@ public class AppTest {
                         body -> {
                             assertThat(body).doesNotContain(existingUser);
                         });
+    }
+
+    @Test
+    @Order(6)
+    public void testAddArticle() {
+        Article newArticleData = new Article("New", "Test content");
+        webTestClient
+                .post()
+                .uri("/articles")
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON)
+                .body(Mono.just(newArticleData), Article.class)
+                .exchange()
+                .expectStatus()
+                .isOk();
+
+        webTestClient
+                .get()
+                .uri("/articles")
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(String.class)
+                .value(
+                        body -> {
+                            assertThat(body).contains("New", "Test content");
+                        });
+    }
+
+    @Test
+    @Order(7)
+    public void testGetArticle() {
+        Article newArticleData = new Article("New", "Test content");
+        Article createArticle =
+                webTestClient
+                        .post()
+                        .uri("/articles")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .body(Mono.just(newArticleData), Article.class)
+                        .exchange()
+                        .expectStatus()
+                        .isOk()
+                        .expectBody(Article.class)
+                        .returnResult()
+                        .getResponseBody();
+
+        long articleId = createArticle.getId();
+        webTestClient
+                .get()
+                .uri("/articles/{id}", articleId)
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(Article.class)
+                .value(
+                        article -> {
+                            assertThat(article.getTitle()).isEqualTo("New");
+                            assertThat(article.getContent()).isEqualTo("Test content");
+                        });
+    }
+
+    @Test
+    @Order(8)
+    public void testUpdateArticle() {
+        Article newArticleData = new Article("New", "Test content");
+        Article createArticle =
+                webTestClient
+                        .post()
+                        .uri("/articles")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .body(Mono.just(newArticleData), Article.class)
+                        .exchange()
+                        .expectStatus()
+                        .isOk()
+                        .expectBody(Article.class)
+                        .returnResult()
+                        .getResponseBody();
+
+        long articleId = createArticle.getId();
+        Article updatedArticle = new Article("Updated", "Updated content");
+
+        webTestClient
+                .patch()
+                .uri("/articles/{id}", articleId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON)
+                .body(Mono.just(updatedArticle), Article.class)
+                .exchange()
+                .expectStatus()
+                .isOk();
+
+        webTestClient
+                .get()
+                .uri("/articles/{id}", articleId)
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(Article.class)
+                .value(
+                        article -> {
+                            assertThat(article.getTitle()).isEqualTo("Updated");
+                            assertThat(article.getContent()).isEqualTo("Updated content");
+                        });
+    }
+
+    @Test
+    @Order(9)
+    public void testDeleteArticle() {
+        Article newArticleData = new Article("New", "Test content");
+        Article createArticle =
+                webTestClient
+                        .post()
+                        .uri("/articles")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .body(Mono.just(newArticleData), Article.class)
+                        .exchange()
+                        .expectStatus()
+                        .isOk()
+                        .expectBody(Article.class)
+                        .returnResult()
+                        .getResponseBody();
+
+        long articleId = createArticle.getId();
+
+        webTestClient.delete().uri("/articles/{id}", articleId).exchange().expectStatus().isOk();
+
+        webTestClient
+                .get()
+                .uri("/articles/{id}", articleId)
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .isEmpty();
     }
 }
